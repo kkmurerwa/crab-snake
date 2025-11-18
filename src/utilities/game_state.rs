@@ -2,7 +2,7 @@ use crate::utilities::constants::{GRID_COLS, GRID_ROWS};
 use crate::utilities::current_screen::CurrentScreen;
 use crate::utilities::filled_button::FilledButton;
 use crate::utilities::grid_point::GridPoint;
-use crate::utilities::helpers::cell_to_pos;
+use crate::utilities::helpers::{cell_to_pos, random_grid_point};
 use crate::utilities::player_direction::PlayerDirection;
 use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::input::keyboard::KeyCode;
@@ -13,12 +13,13 @@ use std::time::{Duration, Instant};
 
 pub struct GameState {
     last_update: Instant,
-    player_pos: GridPoint,
     cell_w: f32,
     cell_h: f32,
-    player_velocity: f32,
+    player_pos: GridPoint,
     player_direction: PlayerDirection,
+    food_pos: GridPoint,
     current_screen: CurrentScreen,
+    score: i32,
 }
 
 impl GameState {
@@ -31,31 +32,37 @@ impl GameState {
 
         let player_pos = GridPoint { x: 5, y: 5 };
 
-        let player_velocity = 20.0;
-
-        let mut rng = rand::rng();
-        let x = rng.random_range(0..GRID_COLS);
-        let y = rng.random_range(0..GRID_ROWS);
+        let (x, y) = random_grid_point();
+        let food_pos = GridPoint { x, y };
 
         GameState {
             last_update: Instant::now(),
             cell_w,
             cell_h,
             player_pos,
-            player_velocity,
             player_direction: PlayerDirection::Right,
+            food_pos,
             current_screen: CurrentScreen::GameScreen,
+            score: 0,
         }
     }
 
     pub fn get_player_pos(&self) -> Point2<f32> {
-        let player_pos = cell_to_pos(
+        cell_to_pos(
             self.player_pos.x as usize,
             self.player_pos.y as usize,
             self.cell_w,
             self.cell_h,
-        );
-        player_pos
+        )
+    }
+
+    pub fn get_food_pos(&self) -> Point2<f32> {
+        cell_to_pos(
+            self.food_pos.x as usize,
+            self.food_pos.y as usize,
+            self.cell_w,
+            self.cell_h,
+        )
     }
 
     pub fn player_exceeds_bounds(&self) -> bool {
@@ -65,19 +72,28 @@ impl GameState {
             || self.player_pos.y >= GRID_ROWS as i32
     }
 
-    pub fn render_game_screen(&self, canvas: &mut Canvas, ctx: &Context) {
+    pub fn render_game_screen(&mut self, canvas: &mut Canvas, ctx: &Context) {
         let player_pos = self.get_player_pos();
-        let player_x_position = player_pos.x;
-        let player_y_position = player_pos.y;
-        let player_rect = Rect::new(
-            player_x_position,
-            player_y_position,
-            self.cell_w,
-            self.cell_h,
-        );
+        let player_rect = Rect::new(player_pos.x, player_pos.y, self.cell_w, self.cell_h);
         let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)
             .expect("Failed to render player mesh!");
         canvas.draw(&player_mesh, DrawParam::default());
+
+        let food_pos = self.get_food_pos();
+        let center_x = food_pos.x + self.cell_w / 2.0;
+        let center_y = food_pos.y + self.cell_h / 2.0;
+        let radius = self.cell_w.min(self.cell_h) * 0.4;
+        let food_mesh = Mesh::new_circle(
+            ctx,
+            DrawMode::fill(),
+            [center_x, center_y],
+            radius,
+            0.1,
+            Color::GREEN,
+        )
+        .expect("Failed to render food mesh!");
+
+        canvas.draw(&food_mesh, DrawParam::default());
     }
 
     pub fn render_launch_screen(&self, canvas: &mut Canvas, ctx: &Context) {
@@ -114,6 +130,15 @@ impl event::EventHandler for GameState {
             && self.player_direction != PlayerDirection::Left
         {
             self.player_direction = PlayerDirection::Right;
+        }
+
+        if self.player_pos == self.food_pos {
+            self.score += 1;
+
+            println!("New score: {}", self.score);
+
+            let (x, y) = random_grid_point();
+            self.food_pos = GridPoint { x, y };
         }
 
         let now = Instant::now();

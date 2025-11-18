@@ -1,4 +1,5 @@
-pub mod constants;
-pub mod game_state;
-pub mod helpers;
-pub mod player_direction;
+mod constants;
+pub(crate) mod game_state;
+mod grid_point;
+mod helpers;
+mod player_direction;

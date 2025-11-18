@@ -1,3 +1,6 @@
+pub const GRID_COLS: usize = 20;
+pub const GRID_ROWS: usize = 15;
+
 pub const SNAKE_WIDTH: f32 = 20.0;
 pub const SNAKE_HEIGHT: f32 = 20.0;
 

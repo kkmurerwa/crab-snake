@@ -47,19 +47,10 @@ impl GameState {
         }
     }
 
-    pub fn get_player_pos(&self) -> Point2<f32> {
+    pub fn get_point_pos(&self, grid_point: &GridPoint) -> Point2<f32> {
         cell_to_pos(
-            self.player_pos.x as usize,
-            self.player_pos.y as usize,
-            self.cell_w,
-            self.cell_h,
-        )
-    }
-
-    pub fn get_food_pos(&self) -> Point2<f32> {
-        cell_to_pos(
-            self.food_pos.x as usize,
-            self.food_pos.y as usize,
+            grid_point.x as usize,
+            grid_point.y as usize,
             self.cell_w,
             self.cell_h,
         )
@@ -72,14 +63,25 @@ impl GameState {
             || self.player_pos.y >= GRID_ROWS as i32
     }
 
+    pub fn render_launch_screen(&self, canvas: &mut Canvas, ctx: &Context) {
+        let button = FilledButton {
+            rect: Rect::new(100.0, 100.0, 200.0, 60.0),
+            normal_color: Color::from_rgb(100, 0, 0),
+        };
+
+        button.draw(canvas, ctx);
+    }
+
+    pub fn listen_and_render_launch_screen(&self, ctx: &mut Context) {}
+
     pub fn render_game_screen(&mut self, canvas: &mut Canvas, ctx: &Context) {
-        let player_pos = self.get_player_pos();
+        let player_pos = self.get_point_pos(&self.player_pos);
         let player_rect = Rect::new(player_pos.x, player_pos.y, self.cell_w, self.cell_h);
         let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)
             .expect("Failed to render player mesh!");
         canvas.draw(&player_mesh, DrawParam::default());
 
-        let food_pos = self.get_food_pos();
+        let food_pos = self.get_point_pos(&self.food_pos);
         let center_x = food_pos.x + self.cell_w / 2.0;
         let center_y = food_pos.y + self.cell_h / 2.0;
         let radius = self.cell_w.min(self.cell_h) * 0.4;
@@ -96,20 +98,7 @@ impl GameState {
         canvas.draw(&food_mesh, DrawParam::default());
     }
 
-    pub fn render_launch_screen(&self, canvas: &mut Canvas, ctx: &Context) {
-        let button = FilledButton {
-            rect: Rect::new(100.0, 100.0, 200.0, 60.0),
-            normal_color: Color::from_rgb(100, 0, 0),
-        };
-
-        button.draw(canvas, ctx);
-    }
-
-    pub fn render_score_screen(&self, canvas: &mut Canvas, ctx: &Context) {}
-}
-
-impl event::EventHandler for GameState {
-    fn update(&mut self, ctx: &mut Context) -> Result<(), GameError> {
+    pub fn listen_and_update_game_screen(&mut self, ctx: &Context) {
         if ctx.keyboard.is_key_pressed(KeyCode::W)
             && self.player_direction != PlayerDirection::Up
             && self.player_direction != PlayerDirection::Down
@@ -143,7 +132,7 @@ impl event::EventHandler for GameState {
 
         let now = Instant::now();
         if now.duration_since(self.last_update) < Duration::from_millis(500) {
-            return Ok(());
+            return;
         }
 
         self.last_update = now;
@@ -161,6 +150,22 @@ impl event::EventHandler for GameState {
         if self.player_exceeds_bounds() {
             println!("Game over!!!");
             self.current_screen = CurrentScreen::ScoreScreen;
+        }
+    }
+
+    pub fn render_score_screen(&self, canvas: &mut Canvas, ctx: &Context) {}
+}
+
+impl event::EventHandler for GameState {
+    fn update(&mut self, ctx: &mut Context) -> Result<(), GameError> {
+        match self.current_screen {
+            CurrentScreen::LaunchScreen => {
+                self.listen_and_render_launch_screen(ctx);
+            }
+            CurrentScreen::GameScreen => {
+                self.listen_and_update_game_screen(ctx);
+            }
+            CurrentScreen::ScoreScreen => {}
         }
 
         Ok(())

@@ -1,4 +1,6 @@
 use crate::utilities::constants::{GRID_COLS, GRID_ROWS};
+use crate::utilities::current_screen::CurrentScreen;
+use crate::utilities::filled_button::FilledButton;
 use crate::utilities::grid_point::GridPoint;
 use crate::utilities::helpers::cell_to_pos;
 use crate::utilities::player_direction::PlayerDirection;
@@ -16,6 +18,7 @@ pub struct GameState {
     cell_h: f32,
     player_velocity: f32,
     player_direction: PlayerDirection,
+    current_screen: CurrentScreen,
 }
 
 impl GameState {
@@ -34,15 +37,14 @@ impl GameState {
         let x = rng.random_range(0..GRID_COLS);
         let y = rng.random_range(0..GRID_ROWS);
 
-        let player_direction = PlayerDirection::Right;
-
         GameState {
             last_update: Instant::now(),
             cell_w,
             cell_h,
             player_pos,
             player_velocity,
-            player_direction,
+            player_direction: PlayerDirection::Right,
+            current_screen: CurrentScreen::GameScreen,
         }
     }
 
@@ -62,6 +64,32 @@ impl GameState {
             || self.player_pos.y < 0
             || self.player_pos.y >= GRID_ROWS as i32
     }
+
+    pub fn render_game_screen(&self, canvas: &mut Canvas, ctx: &Context) {
+        let player_pos = self.get_player_pos();
+        let player_x_position = player_pos.x;
+        let player_y_position = player_pos.y;
+        let player_rect = Rect::new(
+            player_x_position,
+            player_y_position,
+            self.cell_w,
+            self.cell_h,
+        );
+        let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)
+            .expect("Failed to render player mesh!");
+        canvas.draw(&player_mesh, DrawParam::default());
+    }
+
+    pub fn render_launch_screen(&self, canvas: &mut Canvas, ctx: &Context) {
+        let button = FilledButton {
+            rect: Rect::new(100.0, 100.0, 200.0, 60.0),
+            normal_color: Color::from_rgb(100, 0, 0),
+        };
+
+        button.draw(canvas, ctx);
+    }
+
+    pub fn render_score_screen(&self, canvas: &mut Canvas, ctx: &Context) {}
 }
 
 impl event::EventHandler for GameState {
@@ -107,6 +135,7 @@ impl event::EventHandler for GameState {
 
         if self.player_exceeds_bounds() {
             println!("Game over!!!");
+            self.current_screen = CurrentScreen::ScoreScreen;
         }
 
         Ok(())
@@ -115,18 +144,18 @@ impl event::EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), GameError> {
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
 
-        let player_pos = self.get_player_pos();
-        let player_x_position = player_pos.x;
-        let player_y_position = player_pos.y;
-        let player_rect = Rect::new(
-            player_x_position,
-            player_y_position,
-            self.cell_w,
-            self.cell_h,
-        );
-        let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)?;
+        match self.current_screen {
+            CurrentScreen::LaunchScreen => {
+                self.render_launch_screen(&mut canvas, &ctx);
+            }
+            CurrentScreen::GameScreen => {
+                self.render_game_screen(&mut canvas, &ctx);
+            }
+            CurrentScreen::ScoreScreen => {
+                self.render_score_screen(&mut canvas, &ctx);
+            }
+        }
 
-        canvas.draw(&player_mesh, DrawParam::default());
         canvas.finish(ctx)
     }
 }

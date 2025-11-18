@@ -55,6 +55,13 @@ impl GameState {
         );
         player_pos
     }
+
+    pub fn player_exceeds_bounds(&self) -> bool {
+        self.player_pos.x < 0
+            || self.player_pos.x >= GRID_COLS as i32
+            || self.player_pos.y < 0
+            || self.player_pos.y >= GRID_ROWS as i32
+    }
 }
 
 impl event::EventHandler for GameState {
@@ -98,6 +105,10 @@ impl event::EventHandler for GameState {
             self.player_pos.y -= 1;
         }
 
+        if self.player_exceeds_bounds() {
+            println!("Game over!!!");
+        }
+
         Ok(())
     }
 
@@ -113,10 +124,9 @@ impl event::EventHandler for GameState {
             self.cell_w,
             self.cell_h,
         );
-        let player_rect_mesh =
-            Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)?;
+        let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)?;
 
-        canvas.draw(&player_rect_mesh, DrawParam::default());
+        canvas.draw(&player_mesh, DrawParam::default());
         canvas.finish(ctx)
     }
 }

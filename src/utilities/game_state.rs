@@ -4,6 +4,7 @@ use crate::utilities::filled_button::FilledButton;
 use crate::utilities::grid_point::GridPoint;
 use crate::utilities::helpers::{cell_to_pos, random_grid_point};
 use crate::utilities::player_direction::PlayerDirection;
+use crate::utilities::snake_body::SnakeBody;
 use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::input::keyboard::KeyCode;
 use ggez::mint::Point2;
@@ -15,7 +16,7 @@ pub struct GameState {
     last_update: Instant,
     cell_w: f32,
     cell_h: f32,
-    player_pos: GridPoint,
+    snake_body: SnakeBody,
     player_direction: PlayerDirection,
     food_pos: GridPoint,
     current_screen: CurrentScreen,
@@ -39,7 +40,7 @@ impl GameState {
             last_update: Instant::now(),
             cell_w,
             cell_h,
-            player_pos,
+            snake_body: SnakeBody::new(),
             player_direction: PlayerDirection::Right,
             food_pos,
             current_screen: CurrentScreen::GameScreen,
@@ -56,11 +57,11 @@ impl GameState {
         )
     }
 
-    pub fn player_exceeds_bounds(&self) -> bool {
-        self.player_pos.x < 0
-            || self.player_pos.x >= GRID_COLS as i32
-            || self.player_pos.y < 0
-            || self.player_pos.y >= GRID_ROWS as i32
+    pub fn player_exceeds_bounds(&self, new_head: &GridPoint) -> bool {
+        new_head.x < 0
+            || new_head.x >= GRID_COLS as i32
+            || new_head.y < 0
+            || new_head.y >= GRID_ROWS as i32
     }
 
     pub fn render_launch_screen(&self, canvas: &mut Canvas, ctx: &Context) {
@@ -75,11 +76,14 @@ impl GameState {
     pub fn listen_and_render_launch_screen(&self, ctx: &mut Context) {}
 
     pub fn render_game_screen(&mut self, canvas: &mut Canvas, ctx: &Context) {
-        let player_pos = self.get_point_pos(&self.player_pos);
-        let player_rect = Rect::new(player_pos.x, player_pos.y, self.cell_w, self.cell_h);
-        let player_mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), player_rect, Color::WHITE)
-            .expect("Failed to render player mesh!");
-        canvas.draw(&player_mesh, DrawParam::default());
+        for segment in &self.snake_body.body {
+            let pos = self.get_point_pos(segment);
+            let rect = Rect::new(pos.x, pos.y, self.cell_w, self.cell_h);
+
+            let mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), rect, Color::WHITE).unwrap();
+
+            canvas.draw(&mesh, DrawParam::default());
+        }
 
         let food_pos = self.get_point_pos(&self.food_pos);
         let center_x = food_pos.x + self.cell_w / 2.0;
@@ -121,7 +125,12 @@ impl GameState {
             self.player_direction = PlayerDirection::Right;
         }
 
-        if self.player_pos == self.food_pos {
+        let mut new_head = GridPoint {
+            x: self.snake_body.head().x,
+            y: self.snake_body.head().y,
+        };
+
+        if new_head == self.food_pos {
             self.score += 1;
 
             println!("New score: {}", self.score);
@@ -138,19 +147,21 @@ impl GameState {
         self.last_update = now;
 
         if self.player_direction == PlayerDirection::Right {
-            self.player_pos.x += 1;
+            new_head.x += 1;
         } else if self.player_direction == PlayerDirection::Left {
-            self.player_pos.x -= 1;
+            new_head.x -= 1;
         } else if self.player_direction == PlayerDirection::Down {
-            self.player_pos.y += 1;
+            new_head.y += 1;
         } else if self.player_direction == PlayerDirection::Up {
-            self.player_pos.y -= 1;
+            new_head.y -= 1;
         }
 
-        if self.player_exceeds_bounds() {
+        if self.player_exceeds_bounds(&new_head) {
             println!("Game over!!!");
             self.current_screen = CurrentScreen::ScoreScreen;
         }
+
+        self.snake_body.move_forward(new_head);
     }
 
     pub fn render_score_screen(&self, canvas: &mut Canvas, ctx: &Context) {}

@@ -24,4 +24,9 @@ impl SnakeBody {
         self.body.push_front(new_head);
         self.body.pop_back();
     }
+
+    pub fn add_length(&mut self) {
+        let tail = self.body.back().unwrap();
+        self.body.push_back(tail.clone());
+    }
 }

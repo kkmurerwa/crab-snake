@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct GridPoint {
     pub(crate) x: i32,
     pub(crate) y: i32,

@@ -137,6 +137,7 @@ impl GameState {
 
             let (x, y) = random_grid_point();
             self.food_pos = GridPoint { x, y };
+            self.snake_body.add_length();
         }
 
         let now = Instant::now();

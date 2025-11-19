@@ -1,4 +1,5 @@
 use crate::utilities::grid_point::GridPoint;
+use crate::utilities::player_direction::PlayerDirection;
 use std::collections::VecDeque;
 
 pub struct SnakeBody {
@@ -25,8 +26,19 @@ impl SnakeBody {
         self.body.pop_back();
     }
 
-    pub fn add_length(&mut self) {
-        let tail = self.body.back().unwrap();
-        self.body.push_back(tail.clone());
+    pub fn add_length(&mut self, player_direction: &PlayerDirection) {
+        let mut head = self.head().clone();
+
+        if *player_direction == PlayerDirection::Right {
+            head.x += 1;
+        } else if *player_direction == PlayerDirection::Left {
+            head.x -= 1;
+        } else if *player_direction == PlayerDirection::Down {
+            head.y += 1;
+        } else if *player_direction == PlayerDirection::Up {
+            head.y -= 1;
+        }
+
+        self.body.push_front(head);
     }
 }

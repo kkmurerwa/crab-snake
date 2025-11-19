@@ -12,6 +12,10 @@ use ggez::{event, Context, GameError};
 use rand::Rng;
 use std::time::{Duration, Instant};
 
+// TODO: Change snake length extension to the head instead of the tail
+// TODO: End game if snake bites itself
+// TODO: Prevent food from spawning within the body of the snake - Create a method to check for valid spawn positions which exclude current food position and snake positions.
+// TODO: User wins game if no valid spawn position remains.
 pub struct GameState {
     last_update: Instant,
     cell_w: f32,
@@ -137,7 +141,9 @@ impl GameState {
 
             let (x, y) = random_grid_point();
             self.food_pos = GridPoint { x, y };
-            self.snake_body.add_length();
+            self.snake_body.add_length(&self.player_direction);
+            self.last_update = Instant::now();
+            return;
         }
 
         let now = Instant::now();
